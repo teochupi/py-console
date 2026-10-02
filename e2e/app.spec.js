@@ -28,7 +28,7 @@ test('console distinguishes input, output and errors in execution order', async 
  await page.locator('#input').fill('<img src=x>');
  await page.locator('#input-form button').click();
  await expect(page.locator('#run')).toBeEnabled({timeout:60000});
- await expect(page.locator('.console-input')).toHaveText('› Name: <img src=x>');
+ await expect(page.locator('.console-input')).toHaveText('>>> Name: <img src=x>');
  await expect(page.locator('.console-input img')).toHaveCount(0);
  await expect(page.locator('.console-stderr').first()).toContainText('Warning');
  await expect(page.locator('.console-stderr').last()).toContainText('ValueError');

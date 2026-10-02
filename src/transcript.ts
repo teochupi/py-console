@@ -18,12 +18,12 @@ export class Transcript {
       const marker = document.createElement('span');
       marker.className = 'console-marker';
       marker.setAttribute('aria-hidden', 'true');
-      marker.textContent = '› ';
+      marker.textContent = '>>> ';
       entry.append(marker);
     }
     const content = document.createElement('span');
     content.className = 'console-text';
-    // Input occupies its own styled row; avoid an extra empty line inside it.
+    // Input occupies its own line; avoid an extra empty line inside it.
     content.textContent = kind === 'input' ? text.replace(/\n$/, '') : text;
     entry.append(content);
     this.container.append(entry);
