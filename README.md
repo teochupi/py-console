@@ -70,11 +70,13 @@ TAB  ←  →  ()  []  {}  :  "  '  =  _  #
 - **Android:** браузърно меню → Install app / Add to Home Screen.
 - **Desktop:** използвай Install app, когато браузърът го предлага.
 
-Първото онлайн зареждане кешира приложението и локалните файлове на Python runtime. Изчакай Run да стане активен, преди да прекъснеш връзката. След успешно кеширане можеш да презареждаш и изпълняваш стандартен Python код offline. Development режимът не кешира целия проект.
+При първото успешно онлайн зареждане приложението кешира интерфейса и файловете, необходими за изпълнение на Python. Изчакай **Run** да стане активен, преди да прекъснеш връзката. След това можеш да презареждаш и изпълняваш Python offline, докато кешираните файлове остават на устройството. Това се отнася за публикуваната версия и production build; development режимът не кешира целия проект.
 
-Новата offline версия изчаква затварянето на отворените прозорци на приложението, преди да се активира. Ако не виждаш последните промени, затвори Py Console във всички табове и от Home Screen, после го отвори онлайн отново. При неуспешно зареждане новата версия предлага **Обнови приложението**, а при забавена подготовка — **Опитай отново**. Обновяването на кеша запазва автоматично записания код.
+При обновяване **Run** може да е активен със старата версия, докато новата още се изтегля. Изтеглената нова версия се активира след затваряне на прозорците, използващи предишната. Ако не виждаш последните промени, затвори Py Console във всички табове и от Home Screen, после го отвори онлайн отново.
 
-Браузърът може да освободи локалното хранилище. Използвай Export за дългосрочно запазване; недостатъчното свободно място може да попречи на offline подготовката.
+При засечен проблем със зареждането на интерфейса се показва **Обнови приложението**, а при неуспешна или забавена подготовка — **Опитай отново**. Възстановяването изчиства кеша на приложението, без да изтрива кода и темата от localStorage. То не може да възстанови данни, които браузърът или потребителят вече е изтрил.
+
+Браузърът може да освободи локалното хранилище. Използвай **Export .py** за дългосрочно запазване; недостатъчното свободно място може да попречи на offline подготовката.
 
 ### 🛠️ Локално стартиране
 
@@ -105,13 +107,20 @@ npx playwright test
 
 Приложението е изпробвано ръчно на телефон, включително от Home Screen. Това допълва автоматизираните проверки и не означава проверка на всеки модел или версия на браузър.
 
-### 🌐 Публикуване с GitHub Pages
+### 🌐 Отвори приложението
 
-В **Settings → Pages → Build and deployment → Source** избери **GitHub Actions**. Workflow файлът `.github/workflows/pages.yml` инсталира зависимостите, изпълнява тестовете, прави build и публикува `dist` при push към `main` или ръчно стартиране.
+**[Стартирай Py Console](https://teochupi.github.io/py-console/)** директно в браузъра — без регистрация и без инсталиране на Python.
 
-**Публикувана версия:** [teochupi.github.io/py-console](https://teochupi.github.io/py-console/).
+<details>
+<summary>За разработчици: публикуване на собствено копие с GitHub Pages</summary>
 
-След deployment workflow-ът проверява и реалния сайт: зарежда интерфейса и изпълнява Python в Chromium и WebKit. Адресът се показва и в Settings → Pages. Относителните URL адреси поддържат repository подпапка. За публично repository GitHub Pages е достъпен в безплатния план, в рамките на лимитите на GitHub. Не са необходими собствен домейн, платен сървър или API ключове.
+В своето repository отвори **Settings → Pages → Build and deployment → Source** и избери **GitHub Actions**.
+
+Workflow файлът `.github/workflows/pages.yml` инсталира зависимостите, изпълнява тестовете, прави build и публикува `dist` при push към `main` или ръчно стартиране. След deployment проверява публикувания сайт чрез зареждане на интерфейса и изпълнение на Python в Chromium и WebKit.
+
+Ако публикуваш fork, промени `PUBLISHED_URL` в workflow-а към адреса на собственото приложение. Адресът се показва в **Settings → Pages**. Относителните URL адреси позволяват приложението да работи в repository подпапка.
+
+</details>
 
 ### 🔒 Данни и възможности
 
@@ -168,11 +177,13 @@ Each run uses a fresh Python globals dictionary. Imported modules may remain in 
 - **Android:** browser menu → Install app / Add to Home Screen.
 - **Desktop:** use the browser's Install app action where supported.
 
-During the first online visit, the service worker caches the app and bundled Python runtime. Keep the connection until Run becomes available. Once caching succeeds, you can reload and execute standard Python offline. Development mode does not precache the whole project.
+On the first successful online visit, the app caches its interface and the files needed to run Python. Wait until **Run** becomes available before disconnecting. You can then reload and run Python offline while those cached files remain on the device. This applies to the published app and production builds; development mode does not precache the whole project.
 
-An updated offline version waits for existing app windows to close before activating. If changes are missing, close all Py Console tabs and the Home Screen app, then reopen it online. The current version offers **Обнови приложението** (Refresh app) if the interface fails to load and **Опитай отново** (Try again) if preparation stalls. Cache recovery preserves automatically saved code.
+During an update, **Run** may be available using the previous version while the new version is still downloading. The downloaded version activates once windows using the previous version close. If changes are missing, close all Py Console tabs and the Home Screen app, then reopen it online.
 
-Browser storage may be evicted, and caching can fail if storage is full. Export important code for long-term safekeeping.
+When an interface-loading problem is detected, the app shows **Обнови приложението** (Refresh app). Failed or delayed preparation shows **Опитай отново** (Try again). Recovery clears the app cache without deleting code or theme preferences from localStorage. It cannot restore data already removed by the browser or user.
+
+Browser storage may be evicted, and caching can fail if storage is full. Use **Export .py** for long-term safekeeping.
 
 ### 🛠️ Local development
 
@@ -203,13 +214,20 @@ On Windows, Chromium tests use the installed **Microsoft Edge**. GitHub Actions 
 
 The app has also been manually tried on a phone, including Home Screen use. This complements automated checks; it does not establish compatibility with every device or browser version.
 
-### 🌐 GitHub Pages deployment
+### 🌐 Open the app
 
-In **Settings → Pages → Build and deployment → Source**, select **GitHub Actions**. The included workflow installs dependencies, runs unit tests, builds the app and deploys `dist` on pushes to `main` or manual dispatch.
+**[Launch Py Console](https://teochupi.github.io/py-console/)** in your browser — no account or Python installation required.
 
-**Live app:** [teochupi.github.io/py-console](https://teochupi.github.io/py-console/).
+<details>
+<summary>For developers: deploy your own copy with GitHub Pages</summary>
 
-After deployment, the workflow also checks the live site by loading the interface and running Python in Chromium and WebKit. Settings → Pages also shows the public site URL. Relative asset URLs support repository subpaths. Public repositories can use GitHub Pages on the free plan, subject to GitHub's limits. No paid server, custom domain or API keys are needed.
+In your repository, open **Settings → Pages → Build and deployment → Source** and select **GitHub Actions**.
+
+The included `.github/workflows/pages.yml` workflow installs dependencies, runs tests, builds the app and deploys `dist` on pushes to `main` or manual dispatch. After deployment, it checks the published site by loading the interface and executing Python in Chromium and WebKit.
+
+When deploying a fork, change `PUBLISHED_URL` in the workflow to your own app's URL. **Settings → Pages** shows the site address. Relative asset URLs support repository subpaths.
+
+</details>
 
 ### 🔒 Privacy and scope
 
