@@ -126,7 +126,7 @@ Workflow файлът `.github/workflows/pages.yml` инсталира зави�
 
 Приложението не изпраща кода или отговорите на `input()` към Python сървър и няма вградени analytics. Кодът и темата се запазват локално. Хостингът получава обичайните заявки за статичните файлове.
 
-V1 поддържа стандартната библиотека, включена в Pyodide, без автоматична инсталация на допълнителни пакети. Не предоставя терминални приложения или сървърна файлова система. Output пази последните 200 000 символа. Входът има timeout до пет минути; браузърът може да прекъсне изчакването по-рано, особено във фонов режим.
+V1 поддържа стандартната библиотека, включена в Pyodide, без автоматична инсталация на допълнителни пакети. Не предоставя терминални приложения или сървърна файлова система. Output пази последните 200 000 символа. Приложението няма собствен времеви лимит за чакане на `input()`: програмата чака отговор или Stop. Недовършеният отговор се пази локално и се възстановява при нов Run, когато същият код стигне до същото поредно `input()` със същия prompt. При промяна на кода или New старият отговор не се прилага автоматично. Браузърът или операционната система все пак може да прекъсне изпълнението във фонов режим. При установено прекъсване или презареждане по време на изпълнение се показва съобщение за нов Run; възстановяване на Python от същата инструкция след затваряне не е гарантирано. Потвърждението за изпратен отговор има отделен кратък срок; той не ограничава времето за писане на отговора.
 
 ---
 
@@ -233,7 +233,7 @@ When deploying a fork, change `PUBLISHED_URL` in the workflow to your own app's 
 
 The app does not upload your code or input to a Python server and includes no analytics. Code and theme preferences are stored locally. The hosting provider receives normal static-file requests.
 
-V1 supports the standard library bundled with Pyodide and does not automatically install third-party packages. It is not a full desktop IDE, terminal or server filesystem. Output retains the last 200,000 characters. Input can wait up to five minutes, but browser background/service worker limits may interrupt it sooner.
+V1 supports the standard library bundled with Pyodide and does not automatically install third-party packages. It is not a full desktop IDE, terminal or server filesystem. Output retains the last 200,000 characters. The app has no input-wait deadline: Python waits for a response or Stop. An unfinished response is stored locally and restored on a new Run when unchanged code reaches the same input number with the same prompt. Changing the code or selecting New prevents the old response from being applied automatically. The browser or OS can still interrupt execution in the background. Detected interruptions, including reloading during a run, show a message to run again; resuming Python at the same instruction after closing is not guaranteed. A separate short response-acknowledgement deadline does not limit how long you can take to type an answer.
 
 ---
 

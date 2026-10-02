@@ -43,14 +43,67 @@ for(const key of ['TAB','←','→','()','[]','{}',':','"',"'",'=','_','#']){con
 const transcript = new Transcript(el('output'));
 let pendingPrompt = '';
 let worker:Worker|undefined,inputId:string|undefined,ready=false;
-function finish(){run.disabled=!ready;el('stop').hidden=true;el('input-form').hidden=true;inputId=undefined;el('status').textContent='';}
+let executionCode='',inputIndex=0,generation=0;
+let transportId:string|undefined;
+type InputDraft={code:string;prompt:string;index:number;value:string};
+let draft:InputDraft|undefined;
+try{const raw=localStorage.getItem('py-console.input-draft');if(raw){const value=JSON.parse(raw);if(typeof value.code==='string'&&typeof value.prompt==='string'&&typeof value.value==='string'&&Number.isInteger(value.index))draft=value;}}catch{}
+function clearDraft(){draft=undefined;try{localStorage.removeItem('py-console.input-draft');}catch{}}
+function markExecution(active:boolean){try{if(active)sessionStorage.setItem('py-console.running','1');else sessionStorage.removeItem('py-console.running');}catch{}}
+function interruptionText(){
+ let saved=false;try{saved=localStorage.getItem('py-console.code')===editor.state.doc.toString();}catch{}
+ return 'Изпълнението беше прекъснато. '+(saved?'Кодът ти е запазен — ':'')+'Натисни Run отново.\n';
+}
+function cancelInput(){for(const id of new Set([inputId,transportId]))if(id)navigator.serviceWorker.controller?.postMessage({type:'cancel-input',id});transportId=undefined;}
+window.addEventListener('pagehide',event=>{if(!event.persisted)cancelInput();});
+function interrupted(){generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append(interruptionText(),'system');finish();}
+try{if(sessionStorage.getItem('py-console.running')){sessionStorage.removeItem('py-console.running');transcript.append(interruptionText(),'system');}}catch{}
+(el('input') as HTMLInputElement).oninput=()=>{
+ if(!inputId)return;
+ draft={code:executionCode,prompt:pendingPrompt,index:inputIndex,value:(el('input') as HTMLInputElement).value};
+ try{localStorage.setItem('py-console.input-draft',JSON.stringify(draft));}catch{el('save').textContent='Отговорът не може да се запази на устройството.';}
+};
+function finish(){markExecution(false);run.disabled=!ready;el('stop').hidden=true;el('input-form').hidden=true;inputId=undefined;el('status').textContent='';}
 
-el('new').onclick=()=>{if(editor.state.doc.length&&!confirm('Да изчистя текущия код?'))return;worker?.terminate();worker=undefined;editor.dispatch({changes:{from:0,to:editor.state.doc.length,insert:''}});transcript.clear();(el('input') as HTMLInputElement).value='';finish();editor.focus();};
+el('new').onclick=()=>{if(editor.state.doc.length&&!confirm('Да изчистя текущия код?'))return;generation++;cancelInput();clearDraft();worker?.terminate();worker=undefined;editor.dispatch({changes:{from:0,to:editor.state.doc.length,insert:''}});transcript.clear();(el('input') as HTMLInputElement).value='';finish();editor.focus();};
 el('export').onclick=()=>{const url=URL.createObjectURL(new Blob([editor.state.doc.toString()],{type:'text/x-python;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='session.py';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 el('clear').onclick=()=>{transcript.clear();};
-run.onclick=()=>{run.disabled=true;el('stop').hidden=false;el('status').textContent='Изпълнение…';transcript.clear();worker??=new Worker(new URL('./worker.js',document.baseURI));worker.onmessage=({data})=>{if(data.type==='output')transcript.append(data.text, data.channel === 'stderr' ? 'stderr' : 'stdout');if(data.type==='done'){if(data.reset){worker?.terminate();worker=undefined;}finish();}if(data.type==='input'){inputId=data.id;pendingPrompt=data.prompt;el('prompt').textContent=data.prompt||'Вход';el('input-form').hidden=false;el('status').textContent='Очаква вход';(el('input') as HTMLInputElement).focus();}};worker.onerror=e=>{transcript.append((e.message || 'Python worker не може да стартира в този браузър.')+'\n', 'stderr');worker?.terminate();worker=undefined;finish();};worker.postMessage({type:'run',code:editor.state.doc.toString()});};
-el('stop').onclick=()=>{worker?.terminate();worker=undefined;if(inputId)navigator.serviceWorker.controller?.postMessage({type:'input',id:inputId,value:''});transcript.append('Изпълнението е спряно.\n', 'system');finish();};
-el('input-form').onsubmit=e=>{e.preventDefault();if(!inputId)return;const field=el('input') as HTMLInputElement;navigator.serviceWorker.controller?.postMessage({type:'input',id:inputId,value:field.value});transcript.append(pendingPrompt+field.value+'\n', 'input');field.value='';inputId=undefined;el('input-form').hidden=true;el('status').textContent='Изпълнение…';};
+run.onclick=()=>{generation++;executionCode=editor.state.doc.toString();inputIndex=0;markExecution(true);run.disabled=true;el('stop').hidden=false;el('status').textContent='Изпълнение…';transcript.clear();worker??=new Worker(new URL('./worker.js',document.baseURI));const activeWorker=worker;worker.onmessage=({data})=>{if(worker!==activeWorker)return;if(data.type==='output')transcript.append(data.text, data.channel === 'stderr' ? 'stderr' : 'stdout');if(data.type==='interrupted'){interrupted();return;}if(data.type==='done'){if(draft?.code===executionCode&&draft.index<=inputIndex&&!inputId)clearDraft();if(data.reset){worker?.terminate();worker=undefined;}finish();}if(data.type==='input'){inputId=data.id;pendingPrompt=data.prompt;inputIndex++;(el('input') as HTMLInputElement).value=draft?.code===executionCode&&draft.prompt===pendingPrompt&&draft.index===inputIndex?draft.value:'';el('prompt').textContent=data.prompt||'Вход';el('input-form').hidden=false;el('status').textContent='Очаква вход';(el('input') as HTMLInputElement).focus();}};worker.onerror=e=>{if(worker!==activeWorker)return;if(inputId){interrupted();return;}transcript.append((e.message || 'Python worker не може да стартира в този браузър.')+'\n', 'stderr');worker?.terminate();worker=undefined;finish();};worker.postMessage({type:'run',code:executionCode});};
+el('stop').onclick=()=>{generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append('Изпълнението е спряно.\n', 'system');finish();};
+el('input-form').onsubmit=async e=>{
+ e.preventDefault();if(!inputId)return;
+ const id=inputId,field=el('input') as HTMLInputElement;
+ const controller=navigator.serviceWorker.controller;
+ if(!controller){interrupted();return;}
+ const value=field.value,runGeneration=generation;
+ const submittedDraft:InputDraft={code:executionCode,prompt:pendingPrompt,index:inputIndex,value};
+ draft=submittedDraft;
+ try{localStorage.setItem('py-console.input-draft',JSON.stringify(draft));}catch{}
+ // Record input before releasing Python, so output always follows the response.
+ transcript.append(pendingPrompt+value+'\n','input');
+ field.value='';inputId=undefined;transportId=id;el('input-form').hidden=true;el('status').textContent='Изпълнение…';
+ const channel=new MessageChannel();
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ try{
+  const ok=await new Promise<boolean>((resolve,reject)=>{
+   channel.port1.onmessage=event=>resolve(event.data?.ok===true);
+   timer=setTimeout(()=>reject(new Error('No input acknowledgement')),10000);
+   controller.postMessage({type:'input',id,value},[channel.port2]);
+  });
+  if(generation!==runGeneration)return;
+  if(!ok){interrupted();return;}
+  if(draft===submittedDraft)clearDraft();
+ }catch{
+  if(generation===runGeneration&&run.disabled&&!inputId){
+   inputId=id;field.value=value;el('input-form').hidden=false;
+   el('status').textContent='Входът не е потвърден — опитай отново или Stop';
+  }
+ }finally{
+  if(timer)clearTimeout(timer);
+  if(transportId===id)transportId=undefined;
+  channel.port1.close();channel.port2.close();
+ }
+};
 async function init(){
  el('retry').hidden=true;
  el('status').textContent='Подготовка…';
