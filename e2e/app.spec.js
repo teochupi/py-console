@@ -28,7 +28,7 @@ test('console distinguishes input, output and errors in execution order', async 
  await page.locator('#input').fill('<img src=x>');
  await page.locator('#input-form button').click();
  await expect(page.locator('#run')).toBeEnabled({timeout:60000});
- await expect(page.locator('.console-input')).toHaveText('>>> Name: <img src=x>');
+ await expect(page.locator('.console-input')).toHaveText('> Name: <img src=x>');
  await expect(page.locator('.console-input img')).toHaveCount(0);
  await expect(page.locator('.console-stderr').first()).toContainText('Warning');
  await expect(page.locator('.console-stderr').last()).toContainText('ValueError');
@@ -51,12 +51,12 @@ test('hello world and author link on phone browsers', async ({page,context}) => 
  await page.locator('#run').click();
  await expect(page.locator('#run')).toBeEnabled({timeout:60000});
  await expect(page.locator('#output')).toHaveText('Hello, world\n');
- await context.route('https://teodor.chupetlov.eu/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<title>Author website</title>'}));
- const link = page.getByRole('link',{name:'teodor.chupetlov.eu'});
+ await context.route('https://teodor-chupetlov.eu/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<title>Author website</title>'}));
+ const link = page.getByRole('link',{name:'teodor-chupetlov.eu'});
  await expect(link).toHaveAttribute('target','_blank');
  const popupPromise = page.waitForEvent('popup');
  await link.click();
  const popup = await popupPromise;
- await expect(popup).toHaveURL('https://teodor.chupetlov.eu/');
+ await expect(popup).toHaveURL('https://teodor-chupetlov.eu/');
  await expect(page.locator('#run')).toBeEnabled();
 });

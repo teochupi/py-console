@@ -6,7 +6,7 @@
 
 **Mobile-first · Offline PWA · Interactive console · No backend**
 
-[Български](#български) · [English](#english) · [Author](https://teodor.chupetlov.eu)
+[Български](#български) · [English](#english) · [Author](https://teodor-chupetlov.eu)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-087b61)
 ![Python: Pyodide](https://img.shields.io/badge/Python-Pyodide-3776ab)
@@ -211,5 +211,5 @@ Bug reports and focused improvements are welcome through GitHub Issues and pull 
 
 Project source: **[MIT License](LICENSE)**. Dependencies retain their own licenses.
 
-Created by **Teodor Chupetlov** · [teodor.chupetlov.eu](https://teodor.chupetlov.eu)
+Created by **Teodor Chupetlov** · [teodor-chupetlov.eu](https://teodor-chupetlov.eu)
 

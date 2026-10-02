@@ -18,7 +18,7 @@ export class Transcript {
       const marker = document.createElement('span');
       marker.className = 'console-marker';
       marker.setAttribute('aria-hidden', 'true');
-      marker.textContent = '>>> ';
+      marker.textContent = '> ';
       entry.append(marker);
     }
     const content = document.createElement('span');

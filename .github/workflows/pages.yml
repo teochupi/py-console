@@ -25,7 +25,7 @@ jobs:
       - run: npm ci
       - name: Check author website connectivity
         continue-on-error: true
-        run: curl --location --head --fail --max-time 30 https://teodor.chupetlov.eu/
+        run: curl --location --head --fail --max-time 30 https://teodor-chupetlov.eu/
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
