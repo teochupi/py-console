@@ -60,3 +60,33 @@ test('hello world and author link on phone browsers', async ({page,context}) => 
  await expect(popup).toHaveURL('https://teodor-chupetlov.eu/');
  await expect(page.locator('#run')).toBeEnabled();
 });
+
+test('failed interface bundle offers recovery without losing saved code', async ({page}) => {
+ await page.addInitScript(() => localStorage.setItem('py-console.code','print(42)'));
+ await page.route('**/assets/*.js', route => route.abort());
+ await page.goto('/');
+ await expect(page.getByRole('button',{name:'Обнови приложението'})).toBeVisible({timeout:25000});
+ await page.unroute('**/assets/*.js');
+ await page.getByRole('button',{name:'Обнови приложението'}).click();
+ await expect(page.locator('#run')).toBeEnabled({timeout:60000});
+ await expect(page.locator('.cm-content')).toHaveText('print(42)');
+});
+
+test('stalled preparation times out and can be retried', async ({page}) => {
+ await page.addInitScript(() => {
+  const container=navigator.serviceWorker;
+  const register=container.register.bind(container);
+  let first=true;
+  container.register=(...args)=>{if(first){first=false;return new Promise(()=>{});}return register(...args);};
+ });
+ await page.clock.install();
+ await page.goto('/');
+ await expect(page.locator('.cm-content')).toBeVisible();
+ await page.locator('.cm-content').fill('print(42)');
+ await page.clock.fastForward(46000);
+ await expect(page.locator('#retry')).toBeVisible();
+ await page.clock.resume();
+ await page.locator('#retry').click();
+ await expect(page.locator('#run')).toBeEnabled({timeout:60000});
+ await expect(page.locator('.cm-content')).toHaveText('print(42)');
+});

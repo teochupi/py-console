@@ -5,9 +5,11 @@ import {insertion} from './toolbar.mjs';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags} from '@lezer/highlight';
 import {Transcript} from './transcript';
+import {prepareServiceWorker} from './startup';
 import './style.css';
 const app=document.querySelector<HTMLDivElement>('#app')!;
-app.innerHTML=`<header><div><span class="mark">›_</span><h1>Py Console</h1></div><div class="header-actions"><span id="status" role="status">Подготовка…</span><button id="theme" type="button" aria-label="Смяна на цветния режим">Light mode</button></div></header><main><section class="editor-panel"><div class="panel-heading"><span>PYTHON <small class="app-caption">Runs on your device</small></span><div><button id="new">New</button><button id="export">Export .py</button><button id="run" class="primary" disabled>▶ Run</button><button id="stop" hidden>■ Stop</button></div></div><div id="editor"></div><nav id="toolbar" aria-label="Програмна лента"></nav><footer id="save" role="status"></footer></section><section class="console-panel"><div class="panel-heading"><span>OUTPUT / CONSOLE</span><button id="clear">Clear</button></div><pre id="output" aria-label="Python console" tabindex="0"></pre><form id="input-form" hidden><label id="prompt" for="input">Вход</label><div><input id="input" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="primary">Enter ↵</button></div></form></section></main><aside><a href="https://teodor-chupetlov.eu/" target="_blank" rel="noopener noreferrer external">teodor-chupetlov.eu</a><span id="offline" role="status"></span></aside>`;
+window.dispatchEvent(new Event('py-console-started'));
+app.innerHTML=`<header><div><span class="mark">›_</span><h1>Py Console</h1></div><div class="header-actions"><span id="status" role="status">Подготовка…</span><button id="theme" type="button" aria-label="Смяна на цветния режим">Light mode</button></div></header><main><section class="editor-panel"><div class="panel-heading"><span>PYTHON <small class="app-caption">Runs on your device</small></span><div><button id="new">New</button><button id="export">Export .py</button><button id="run" class="primary" disabled>▶ Run</button><button id="stop" hidden>■ Stop</button></div></div><div id="editor"></div><nav id="toolbar" aria-label="Програмна лента"></nav><footer id="save" role="status"></footer></section><section class="console-panel"><div class="panel-heading"><span>OUTPUT / CONSOLE</span><button id="clear">Clear</button></div><pre id="output" aria-label="Python console" tabindex="0"></pre><form id="input-form" hidden><label id="prompt" for="input">Вход</label><div><input id="input" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="primary">Enter ↵</button></div></form></section></main><aside><a href="https://teodor-chupetlov.eu/" target="_blank" rel="noopener noreferrer external">teodor-chupetlov.eu</a><span id="offline" role="status"></span><button id="retry" type="button" hidden>Опитай отново</button></aside>`;
 const el=(id:string)=>document.getElementById(id)!;
 const run=el('run') as HTMLButtonElement;
 let theme = 'dark';
@@ -49,14 +51,21 @@ el('clear').onclick=()=>{transcript.clear();};
 run.onclick=()=>{run.disabled=true;el('stop').hidden=false;el('status').textContent='Изпълнение…';transcript.clear();worker??=new Worker(new URL('./worker.js',document.baseURI));worker.onmessage=({data})=>{if(data.type==='output')transcript.append(data.text, data.channel === 'stderr' ? 'stderr' : 'stdout');if(data.type==='done'){if(data.reset){worker?.terminate();worker=undefined;}finish();}if(data.type==='input'){inputId=data.id;pendingPrompt=data.prompt;el('prompt').textContent=data.prompt||'Вход';el('input-form').hidden=false;el('status').textContent='Очаква вход';(el('input') as HTMLInputElement).focus();}};worker.onerror=e=>{transcript.append((e.message || 'Python worker не може да стартира в този браузър.')+'\n', 'stderr');worker?.terminate();worker=undefined;finish();};worker.postMessage({type:'run',code:editor.state.doc.toString()});};
 el('stop').onclick=()=>{worker?.terminate();worker=undefined;if(inputId)navigator.serviceWorker.controller?.postMessage({type:'input',id:inputId,value:''});transcript.append('Изпълнението е спряно.\n', 'system');finish();};
 el('input-form').onsubmit=e=>{e.preventDefault();if(!inputId)return;const field=el('input') as HTMLInputElement;navigator.serviceWorker.controller?.postMessage({type:'input',id:inputId,value:field.value});transcript.append(pendingPrompt+field.value+'\n', 'input');field.value='';inputId=undefined;el('input-form').hidden=true;el('status').textContent='Изпълнение…';};
-async function init(){try{await navigator.serviceWorker.register(new URL('./sw.js',document.baseURI),{scope:new URL('./',document.baseURI).pathname});await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise<void>(resolve=>navigator.serviceWorker.addEventListener('controllerchange',()=>resolve(),{once:true}));ready=true;finish();}catch(error){el('status').textContent='PWA грешка';el('offline').textContent=String(error);}}
-init();
-
-
-
-
-
-
-
-
-
+async function init(){
+ el('retry').hidden=true;
+ el('status').textContent='Подготовка…';
+ el('offline').textContent='';
+ try{
+  await prepareServiceWorker();
+  ready=true;
+  finish();
+ }catch(error){
+  ready=false;
+  run.disabled=true;
+  el('status').textContent='Подготовката не завърши';
+  el('offline').textContent=error instanceof Error ? error.message : String(error);
+  el('retry').hidden=false;
+ }
+}
+el('retry').onclick=()=>{void init();};
+void init();

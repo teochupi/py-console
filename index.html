@@ -1,3 +1,20 @@
-<!doctype html><html lang="bg"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#111b27"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="apple-touch-icon" href="./icon-192.png"><title>Py Console</title></head><body><div id="app"></div><script type="module" src="./src/main.ts"></script></body></html>
+<!doctype html><html lang="bg"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#111b27"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg"><link rel="apple-touch-icon" href="./icon-192.png"><title>Py Console</title></head><body><div id="app"><div id="boot" style="font:16px system-ui;padding:32px;color:#dce7ed;background:#111b27;min-height:100vh"><h1>Py Console</h1><p id="boot-message" role="status">Зареждане…</p><button id="boot-retry" type="button" hidden>Обнови приложението</button></div></div><script>
+(function(){
+ var started=false,timer;
+ function show(){if(started)return;var message=document.getElementById('boot-message'),button=document.getElementById('boot-retry');if(message)message.textContent='Приложението не успя да зареди. Проверете връзката и опитайте обновяване.';if(button)button.hidden=false;}
+ window.addEventListener('py-console-started',function(){started=true;clearTimeout(timer);},{once:true});
+ window.addEventListener('error',function(event){if(event.target&&event.target.tagName==='SCRIPT')show();},true);
+ timer=setTimeout(show,18000);
+ document.getElementById('boot-retry').onclick=async function(){
+  this.disabled=true;document.getElementById('boot-message').textContent='Обновяване…';
+  try{
+   var scope=new URL('./',document.baseURI).href;
+   if(navigator.serviceWorker){var registrations=await navigator.serviceWorker.getRegistrations();await Promise.all(registrations.filter(function(r){return r.scope===scope;}).map(function(r){return r.unregister();}));}
+   if(window.caches){var keys=await caches.keys();await Promise.all(keys.filter(function(k){return k.indexOf('py-console-')===0;}).map(function(k){return caches.delete(k);}));}
+   location.reload();
+  }catch(error){document.getElementById('boot-message').textContent='Неуспешно обновяване. Опитайте отново онлайн.';this.disabled=false;}
+ };
+})();
+</script><script type="module" src="./src/main.ts"></script></body></html>
 
 

@@ -30,6 +30,11 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test
+      - name: Diagnose current published app
+        continue-on-error: true
+        env:
+          PUBLISHED_URL: https://teochupi.github.io/py-console/
+        run: npx playwright test e2e/published.spec.js --project=chromium
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -37,3 +42,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
+      - name: Verify published app
+        env:
+          PUBLISHED_URL: https://teochupi.github.io/py-console/
+        run: npx playwright test e2e/published.spec.js
