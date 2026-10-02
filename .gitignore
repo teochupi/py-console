@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/runtime/
+public/worker.js
+test-results/
+playwright-report/
+
