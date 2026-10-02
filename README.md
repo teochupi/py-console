@@ -201,7 +201,7 @@ CodeMirror 6 ── code ──► Web Worker ──► Pyodide / WebAssembly
 
 Interactive input uses a synchronous request from the worker, answered asynchronously by the service worker. It does not require SharedArrayBuffer or custom isolation headers.
 
-**Stack:** TypeScript · Vite · CodeMirror 6 · Pyodide 0.27.7 · Web Workers · Service Worker · localStorage.
+**Stack:** TypeScript · Vite · CodeMirror 6 · Pyodide 0.28.3 · Web Workers · Service Worker · localStorage.
 
 ## Contributing / Принос
 
