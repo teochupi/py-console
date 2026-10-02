@@ -45,30 +45,36 @@ let pendingPrompt = '';
 let worker:Worker|undefined,inputId:string|undefined,ready=false;
 let executionCode='',inputIndex=0,generation=0;
 let transportId:string|undefined;
+let leaving=false;
 type InputDraft={code:string;prompt:string;index:number;value:string};
-let draft:InputDraft|undefined;
-try{const raw=localStorage.getItem('py-console.input-draft');if(raw){const value=JSON.parse(raw);if(typeof value.code==='string'&&typeof value.prompt==='string'&&typeof value.value==='string'&&Number.isInteger(value.index))draft=value;}}catch{}
-function clearDraft(){draft=undefined;try{localStorage.removeItem('py-console.input-draft');}catch{}}
+let drafts:InputDraft[]=[];
+try{
+ const raw=localStorage.getItem('py-console.input-draft');
+ if(raw){const value=JSON.parse(raw);drafts=(Array.isArray(value)?value:[value]).filter(value=>typeof value?.code==='string'&&typeof value?.prompt==='string'&&typeof value?.value==='string'&&Number.isInteger(value?.index));}
+}catch{}
+function persistDrafts(){try{if(drafts.length)localStorage.setItem('py-console.input-draft',JSON.stringify(drafts));else localStorage.removeItem('py-console.input-draft');}catch{el('save').textContent='Отговорът не може да се запази на устройството.';}}
+function saveDraft(value:InputDraft){drafts=drafts.filter(item=>!(item.code===value.code&&item.prompt===value.prompt&&item.index===value.index));drafts.push(value);persistDrafts();}
+function clearDraft(){drafts=[];persistDrafts();}
+function removeConsumedDrafts(upTo:number){drafts=drafts.filter(item=>item.code!==executionCode||item.index>upTo);persistDrafts();}
 function markExecution(active:boolean){try{if(active)sessionStorage.setItem('py-console.running','1');else sessionStorage.removeItem('py-console.running');}catch{}}
 function interruptionText(){
  let saved=false;try{saved=localStorage.getItem('py-console.code')===editor.state.doc.toString();}catch{}
  return 'Изпълнението беше прекъснато. '+(saved?'Кодът ти е запазен — ':'')+'Натисни Run отново.\n';
 }
 function cancelInput(){for(const id of new Set([inputId,transportId]))if(id)navigator.serviceWorker.controller?.postMessage({type:'cancel-input',id});transportId=undefined;}
-window.addEventListener('pagehide',event=>{if(!event.persisted)cancelInput();});
+window.addEventListener('pagehide',event=>{if(!event.persisted){leaving=true;cancelInput();}});
 function interrupted(){generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append(interruptionText(),'system');finish();}
 try{if(sessionStorage.getItem('py-console.running')){sessionStorage.removeItem('py-console.running');transcript.append(interruptionText(),'system');}}catch{}
 (el('input') as HTMLInputElement).oninput=()=>{
  if(!inputId)return;
- draft={code:executionCode,prompt:pendingPrompt,index:inputIndex,value:(el('input') as HTMLInputElement).value};
- try{localStorage.setItem('py-console.input-draft',JSON.stringify(draft));}catch{el('save').textContent='Отговорът не може да се запази на устройството.';}
+ saveDraft({code:executionCode,prompt:pendingPrompt,index:inputIndex,value:(el('input') as HTMLInputElement).value});
 };
 function finish(){markExecution(false);run.disabled=!ready;el('stop').hidden=true;el('input-form').hidden=true;inputId=undefined;el('status').textContent='';}
 
 el('new').onclick=()=>{if(editor.state.doc.length&&!confirm('Да изчистя текущия код?'))return;generation++;cancelInput();clearDraft();worker?.terminate();worker=undefined;editor.dispatch({changes:{from:0,to:editor.state.doc.length,insert:''}});transcript.clear();(el('input') as HTMLInputElement).value='';finish();editor.focus();};
 el('export').onclick=()=>{const url=URL.createObjectURL(new Blob([editor.state.doc.toString()],{type:'text/x-python;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='session.py';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 el('clear').onclick=()=>{transcript.clear();};
-run.onclick=()=>{generation++;executionCode=editor.state.doc.toString();inputIndex=0;markExecution(true);run.disabled=true;el('stop').hidden=false;el('status').textContent='Изпълнение…';transcript.clear();worker??=new Worker(new URL('./worker.js',document.baseURI));const activeWorker=worker;worker.onmessage=({data})=>{if(worker!==activeWorker)return;if(data.type==='output')transcript.append(data.text, data.channel === 'stderr' ? 'stderr' : 'stdout');if(data.type==='interrupted'){interrupted();return;}if(data.type==='done'){if(draft?.code===executionCode&&draft.index<=inputIndex&&!inputId)clearDraft();if(data.reset){worker?.terminate();worker=undefined;}finish();}if(data.type==='input'){inputId=data.id;pendingPrompt=data.prompt;inputIndex++;(el('input') as HTMLInputElement).value=draft?.code===executionCode&&draft.prompt===pendingPrompt&&draft.index===inputIndex?draft.value:'';el('prompt').textContent=data.prompt||'Вход';el('input-form').hidden=false;el('status').textContent='Очаква вход';(el('input') as HTMLInputElement).focus();}};worker.onerror=e=>{if(worker!==activeWorker)return;if(inputId){interrupted();return;}transcript.append((e.message || 'Python worker не може да стартира в този браузър.')+'\n', 'stderr');worker?.terminate();worker=undefined;finish();};worker.postMessage({type:'run',code:executionCode});};
+run.onclick=()=>{generation++;executionCode=editor.state.doc.toString();inputIndex=0;markExecution(true);run.disabled=true;el('stop').hidden=false;el('status').textContent='Изпълнение…';transcript.clear();worker??=new Worker(new URL('./worker.js',document.baseURI));const activeWorker=worker;worker.onmessage=({data})=>{if(worker!==activeWorker||leaving)return;if(data.type==='output')transcript.append(data.text, data.channel === 'stderr' ? 'stderr' : 'stdout');if(data.type==='interrupted'){interrupted();return;}if(data.type==='done'){if(!inputId)removeConsumedDrafts(inputIndex);if(data.reset){worker?.terminate();worker=undefined;}finish();}if(data.type==='input'){inputId=data.id;pendingPrompt=data.prompt;inputIndex++;removeConsumedDrafts(inputIndex-1);const restoredDraft=drafts.find(item=>item.code===executionCode&&item.prompt===pendingPrompt&&item.index===inputIndex);(el('input') as HTMLInputElement).value=restoredDraft?.value||'';el('prompt').textContent=data.prompt||'Вход';el('input-form').hidden=false;el('status').textContent='Очаква вход';(el('input') as HTMLInputElement).focus();}};worker.onerror=e=>{if(worker!==activeWorker)return;if(inputId){interrupted();return;}transcript.append((e.message || 'Python worker не може да стартира в този браузър.')+'\n', 'stderr');worker?.terminate();worker=undefined;finish();};worker.postMessage({type:'run',code:executionCode});};
 el('stop').onclick=()=>{generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append('Изпълнението е спряно.\n', 'system');finish();};
 el('input-form').onsubmit=async e=>{
  e.preventDefault();if(!inputId)return;
@@ -77,8 +83,7 @@ el('input-form').onsubmit=async e=>{
  if(!controller){interrupted();return;}
  const value=field.value,runGeneration=generation;
  const submittedDraft:InputDraft={code:executionCode,prompt:pendingPrompt,index:inputIndex,value};
- draft=submittedDraft;
- try{localStorage.setItem('py-console.input-draft',JSON.stringify(draft));}catch{}
+ saveDraft(submittedDraft);
  // Record input before releasing Python, so output always follows the response.
  transcript.append(pendingPrompt+value+'\n','input');
  field.value='';inputId=undefined;transportId=id;el('input-form').hidden=true;el('status').textContent='Изпълнение…';
@@ -92,7 +97,7 @@ el('input-form').onsubmit=async e=>{
   });
   if(generation!==runGeneration)return;
   if(!ok){interrupted();return;}
-  if(draft===submittedDraft)clearDraft();
+  drafts=drafts.filter(item=>item!==submittedDraft);persistDrafts();
  }catch{
   if(generation===runGeneration&&run.disabled&&!inputId){
    inputId=id;field.value=value;el('input-form').hidden=false;

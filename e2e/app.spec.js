@@ -147,5 +147,23 @@ test('interrupted input bridge shows a restart message and preserves the answer'
  await page.evaluate(()=>navigator.serviceWorker.controller.postMessage({type:'cancel-input',id:window.testInputId}));
  await expect(page.locator('#run')).toBeEnabled();
  await expect(page.locator('#output')).toContainText('Изпълнението беше прекъснато.');
- expect(JSON.parse(await page.evaluate(()=>localStorage.getItem('py-console.input-draft'))).value).toBe('42');
+ expect(JSON.parse(await page.evaluate(()=>localStorage.getItem('py-console.input-draft')))[0].value).toBe('42');
+});
+
+test('a later input draft survives replaying earlier input',async({page})=>{
+ await page.goto('/');await expect(page.locator('#run')).toBeEnabled({timeout:60000});
+ await page.locator('.cm-content').fill('first = input()\nsecond = input()\nprint(first, second)');
+ await page.locator('#run').click();await expect(page.locator('#input-form')).toBeVisible({timeout:60000});
+ await page.locator('#input').fill('one');await page.locator('#input-form button').click();
+ await expect(page.locator('#input-form')).toBeVisible();
+ await page.locator('#input').fill('unfinished two');
+ await page.reload();await expect(page.locator('#run')).toBeEnabled({timeout:60000});
+ await page.locator('#run').click();await expect(page.locator('#input-form')).toBeVisible({timeout:60000});
+ await expect(page.locator('#input')).toHaveValue('');
+ await page.locator('#input').fill('new one');await page.locator('#input-form button').click();
+ await expect(page.locator('#input-form')).toBeVisible();
+ await expect(page.locator('#input')).toHaveValue('unfinished two');
+ await page.locator('#input-form button').click();
+ await expect(page.locator('#output')).toContainText('new one unfinished two');
+ await expect(page.locator('#run')).toBeEnabled();
 });
