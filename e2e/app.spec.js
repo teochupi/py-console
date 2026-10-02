@@ -44,14 +44,19 @@ test('console distinguishes input, output and errors in execution order', async 
 
 
 
-test('hello world and author link on phone browsers', async ({page}) => {
+test('hello world and author link on phone browsers', async ({page,context}) => {
  await page.goto('/');
  await expect(page.locator('#run')).toBeEnabled({timeout:60000});
  await page.locator('.cm-content').fill("print('Hello, world')");
  await page.locator('#run').click();
  await expect(page.locator('#run')).toBeEnabled({timeout:60000});
  await expect(page.locator('#output')).toHaveText('Hello, world\n');
- await page.route('https://teodor.chupetlov.eu/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<title>Author website</title>'}));
- await page.getByRole('link',{name:'teodor.chupetlov.eu'}).click();
- await expect(page).toHaveURL('https://teodor.chupetlov.eu/');
+ await context.route('https://teodor.chupetlov.eu/**',route=>route.fulfill({status:200,contentType:'text/html',body:'<title>Author website</title>'}));
+ const link = page.getByRole('link',{name:'teodor.chupetlov.eu'});
+ await expect(link).toHaveAttribute('target','_blank');
+ const popupPromise = page.waitForEvent('popup');
+ await link.click();
+ const popup = await popupPromise;
+ await expect(popup).toHaveURL('https://teodor.chupetlov.eu/');
+ await expect(page.locator('#run')).toBeEnabled();
 });
