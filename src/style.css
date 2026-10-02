@@ -45,4 +45,27 @@ footer:empty{display:none}
 [data-theme="light"] .cm-activeLine,[data-theme="light"] .cm-activeLineGutter{background:#dce8f3!important}
 [data-theme="light"] .cm-cursor{border-left-color:#111827!important}
 [data-theme="light"] .cm-selectionBackground{background:#adcce5!important}
+/* Theme-aware Python syntax: readable on both the editor and active line. */
+:root{
+  --code-keyword:#d8b4fe;--code-number:#7de3c1;--code-string:#fde68a;
+  --code-comment:#b6c6d8;--code-function:#9bd8ff;--code-type:#f9b6cf;
+  --code-operator:#e2e8f0;--code-punctuation:#d7e6f5;--code-variable:#f1f5f9;
+}
+:root[data-theme="light"]{
+  --code-keyword:#6b21a8;--code-number:#00543e;--code-string:#713f12;
+  --code-comment:#3e5269;--code-function:#075985;--code-type:#9d174d;
+  --code-operator:#1e293b;--code-punctuation:#334155;--code-variable:#111827;
+}
+#editor .pc-keyword{color:var(--code-keyword);font-weight:600}
+#editor .pc-number{color:var(--code-number)}
+#editor .pc-string{color:var(--code-string)}
+#editor .pc-comment{color:var(--code-comment);font-style:italic}
+#editor .pc-function{color:var(--code-function)}
+#editor .pc-type{color:var(--code-type)}
+#editor .pc-operator{color:var(--code-operator)}
+#editor .pc-punctuation{color:var(--code-punctuation)}
+#editor .pc-variable{color:var(--code-variable)}
+:root[data-theme="dark"] .cm-gutters{color:#b6c6d8!important}
+:root[data-theme="dark"] small,:root[data-theme="dark"] #status{color:#b6c6d8}
+
 
