@@ -78,3 +78,8 @@ footer:empty{display:none}
 [data-theme="light"] .console-system{color:#334155}
 
 
+
+/* Keep editable text readable without iPhone's focus zoom, including landscape. */
+@media (max-width:760px), (pointer:coarse){
+ #editor .cm-editor,#editor .cm-content,#input{font-size:16px}
+}

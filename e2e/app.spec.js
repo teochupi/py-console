@@ -15,6 +15,12 @@ test('Python input, autosave, toolbar, Stop and offline',async({page,context,bro
   test.info().annotations.push({type:'limitation',description:'Offline navigation requires a real iPhone check; Playwright WebKit issue #42775'});
  }await editor.fill('print(6 * 7)');await page.locator('#run').click();await expect(page.locator('#output')).toContainText('42',{timeout:60000});
  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await editor.click();
+ expect(await editor.evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
+ expect(await page.locator('#input').evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);
+ const gutter=await page.locator('.cm-gutters').boundingBox();
+ expect(gutter.x).toBeGreaterThanOrEqual(0);
+ expect(gutter.x+gutter.width).toBeLessThanOrEqual(390);
 });
 test('console distinguishes input, output and errors in execution order', async ({page}) => {
  await page.goto('/');
