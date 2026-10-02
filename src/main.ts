@@ -63,13 +63,13 @@ function interruptionText(){
 }
 function cancelInput(){for(const id of new Set([inputId,transportId]))if(id)navigator.serviceWorker.controller?.postMessage({type:'cancel-input',id});transportId=undefined;}
 window.addEventListener('pagehide',event=>{if(!event.persisted){leaving=true;cancelInput();}});
-function interrupted(){generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append(interruptionText(),'system');finish();}
+function interrupted(){generation++;cancelInput();worker?.terminate();worker=undefined;transcript.append(interruptionText(),'system');finish(false);}
 try{if(sessionStorage.getItem('py-console.running')){sessionStorage.removeItem('py-console.running');transcript.append(interruptionText(),'system');}}catch{}
 (el('input') as HTMLInputElement).oninput=()=>{
  if(!inputId)return;
  saveDraft({code:executionCode,prompt:pendingPrompt,index:inputIndex,value:(el('input') as HTMLInputElement).value});
 };
-function finish(){markExecution(false);run.disabled=!ready;el('stop').hidden=true;el('input-form').hidden=true;inputId=undefined;el('status').textContent='';}
+function finish(clearExecution=true){if(clearExecution)markExecution(false);run.disabled=!ready;el('stop').hidden=true;el('input-form').hidden=true;inputId=undefined;el('status').textContent='';}
 
 el('new').onclick=()=>{if(editor.state.doc.length&&!confirm('Да изчистя текущия код?'))return;generation++;cancelInput();clearDraft();worker?.terminate();worker=undefined;editor.dispatch({changes:{from:0,to:editor.state.doc.length,insert:''}});transcript.clear();(el('input') as HTMLInputElement).value='';finish();editor.focus();};
 el('export').onclick=()=>{const url=URL.createObjectURL(new Blob([editor.state.doc.toString()],{type:'text/x-python;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='session.py';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
