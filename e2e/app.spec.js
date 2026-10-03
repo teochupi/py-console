@@ -167,3 +167,20 @@ test('a later input draft survives replaying earlier input',async({page})=>{
  await expect(page.locator('#output')).toContainText('new one unfinished two');
  await expect(page.locator('#run')).toBeEnabled();
 });
+
+test('Enter uses four-space Python indentation and preserves nested blocks',async({page})=>{
+ await page.goto('/');await expect(page.locator('.cm-content')).toBeVisible();
+ const editor=page.locator('.cm-content');
+ const code=()=>page.evaluate(()=>localStorage.getItem('py-console.code'));
+ await editor.fill('def demo():');
+ await editor.press('Enter');await page.keyboard.type('if True:');
+ await editor.press('Enter');await page.keyboard.type('print(1)');
+ await editor.press('Enter');await page.keyboard.type('print(2)');
+ await expect.poll(code).toBe('def demo():\n    if True:\n        print(1)\n        print(2)');
+ await editor.fill('for i in range(3):');
+ await editor.press('Enter');await page.keyboard.type('print(i)');
+ await expect.poll(code).toBe('for i in range(3):\n    print(i)');
+ await editor.fill('value = 1');
+ await editor.press('Enter');await page.keyboard.type('print(value)');
+ await expect.poll(code).toBe('value = 1\nprint(value)');
+});

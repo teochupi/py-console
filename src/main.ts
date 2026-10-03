@@ -2,7 +2,7 @@ import {EditorView} from '@codemirror/view';
 import {basicSetup} from 'codemirror';
 import {python} from '@codemirror/lang-python';
 import {insertion} from './toolbar.mjs';
-import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
+import {HighlightStyle, indentUnit, syntaxHighlighting} from '@codemirror/language';
 import {tags} from '@lezer/highlight';
 import {Transcript} from './transcript';
 import {prepareServiceWorker} from './startup';
@@ -38,7 +38,7 @@ const codeHighlight = syntaxHighlighting(HighlightStyle.define([
   {tag: [tags.punctuation, tags.bracket], class: 'pc-punctuation'},
   {tag: [tags.variableName, tags.propertyName], class: 'pc-variable'},
 ]));
-const editor=new EditorView({doc:restored,parent:el('editor'),extensions:[basicSetup,python(),codeHighlight,EditorView.lineWrapping,EditorView.theme({'&':{height:'100%'},'.cm-scroller':{overflow:'auto',fontFamily:'Consolas, monospace'},'.cm-content':{minHeight:'240px'}}),EditorView.updateListener.of(update=>{if(update.docChanged){try{localStorage.setItem('py-console.code',update.state.doc.toString());el('save').textContent='';}catch{el('save').textContent='Неуспешно локално запазване — използвайте Export .py';}}})]});
+const editor=new EditorView({doc:restored,parent:el('editor'),extensions:[basicSetup,python(),indentUnit.of('    '),codeHighlight,EditorView.lineWrapping,EditorView.theme({'&':{height:'100%'},'.cm-scroller':{overflow:'auto',fontFamily:'Consolas, monospace'},'.cm-content':{minHeight:'240px'}}),EditorView.updateListener.of(update=>{if(update.docChanged){try{localStorage.setItem('py-console.code',update.state.doc.toString());el('save').textContent='';}catch{el('save').textContent='Неуспешно локално запазване — използвайте Export .py';}}})]});
 for(const key of ['TAB','←','→','()','[]','{}',':','"',"'",'=','_','#']){const b=document.createElement('button');b.textContent=key;b.type='button';b.setAttribute('aria-label',key==='TAB'?'Вмъкни 4 интервала':key);b.onpointerdown=e=>e.preventDefault();b.onclick=()=>{const s=editor.state.selection.main;if(key==='←'||key==='→'){const pos=Math.max(0,Math.min(editor.state.doc.length,s.head+(key==='←'?-1:1)));editor.dispatch({selection:{anchor:pos},scrollIntoView:true});}else{const change=insertion(editor.state.doc.toString(),s.from,s.to,key);editor.dispatch({changes:{from:change.from,to:change.to,insert:change.insert},selection:{anchor:change.anchor,head:change.head},scrollIntoView:true});}editor.focus();};el('toolbar').append(b);}
 const transcript = new Transcript(el('output'));
 let pendingPrompt = '';
